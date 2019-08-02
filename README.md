@@ -7,7 +7,8 @@ krpano官方提供的编辑功能都是通过内嵌flash实现的，对于不懂
 
 使用说明:
 
-访问地址：https://baotao1997.github.io/vrsystem_krpano/dist/index.html#/
+访问地址：https://baotao1997.github.io/vrsystem_krpano/dist/index.html#/ （无后台无法保存）
+预览页面：https://baotao1997.github.io/vrsystem_krpano/dist/static/tour.html
 
 `vrsystem_1.0`包含热点切换以及热点编辑配置,以及相关特效功能,并在`node`中包含保存热点信息和上传背景音乐接口(`Node`实现),使用简单的nodejs express提供静态资源服务器功能，以及提供保存接口实现本地tour.xml文件的修改，具体参考app.js文件，项目核心难点是对krpano的各种html api的理解，具体参考官网文档即可还有很多功能可以完善。
 
