@@ -1,0 +1,502 @@
+<krpano>
+
+	<!--
+		combobox.xml Plugin - krpano 1.19-pr16
+
+		- This plugin converts <combobox> elements in the current xml
+		  into <layer> container, scrollarea and textfield elements.
+		- Additionally it's also possible to add and remove combobox
+		  elements also dynamically.
+		- The full xml implementation allows many ways of customizing
+		  for own needs - custom designs/styles, custom functionality.
+		- The plugin works automatically the same for HTML5 and Flash.
+		- It's possible to use this plugin as replacement for the old
+		  combobox.swf/combobox.js plugins, the action interfaces are
+		  the same.
+
+
+		Syntax for Static XML Code:
+
+			<combobox name="..." design="..." ...any layer settings...>
+				<item name="..." caption="..." onclick="..." />
+				<item name="..." caption="..." onclick="..." />
+			</combobox>
+
+		Syntax for Dynamic XML Code:
+
+		 - Global Actions:
+
+			addComboboxLayer(cbname, design*)
+			removeComboboxLayer(cbname);
+
+		 - Combobox Layer Actions:
+
+			layer[cbname].addItem(caption, onclick)
+			layer[cbname].addNamedItem(name, caption, onclick)
+			layer[cbname].addIdItem(name, caption, onclick);       same as addNamedItem (for combobox.js compatibility)
+			layer[cbname].selectItem(caption)
+			layer[cbname].selectItemByName(name_or_index)
+			layer[cbname].selectIdItem(name_or_index)              same as selectItemByName (for combobox.js compatibility)
+			layer[cbname].removeAll()
+			layer[cbname].openList()
+			layer[cbname].closeList()
+
+		 - Events/Callbacks:
+
+			layer[cbname].onChange
+
+		- Combobox Layer Attributes:
+
+			layer[cbname].item              - krpano Array of the items
+			layer[cbname].selecteditemindex - current selected item index
+	-->
+
+	<!-- path to the scrollarea plugin -->
+	<combobox_scrollareaplugin
+		url.html5="%SWFPATH%/plugins/scrollarea.js"
+		url.flash="%SWFPATH%/plugins/scrollarea.swf"
+		/>
+
+	<!-- core internal layer styles -->
+	<style name="combobox_container_style" type="container" maskchildren="true" bgcapture="true" visible="false" onclick="combobox_onclick_event();" mergedalpha="false" alpha="1.0" />
+	<style name="combobox_marker_style" type="text" align="righttop" edge="center" html="▼" havemarkersize="false" onautosized="set(havemarkersize,true);" mergedalpha="false" alpha="1.0" />
+	<style name="combobox_item_style" type="text" wordwrap="false" vcenter="true" align="lefttop" onover="if(!combbox_item_pressed,onoveritem());asyncloop(hovering,,if(!combbox_item_pressed,onoutitem()));" ondown="onoveritem(); set(combbox_item_pressed,true);" onup="onoutitem(); set(combbox_item_pressed,false);" onoveritem="set(bg,true);" onoutitem="set(bg,false);" mergedalpha="false" alpha="1.0" />
+
+	<!-- several pre-defined designs -->
+	<combobox_design name="default" margin="2" open_close_speed="0.25">
+		<!-- default design - white box with black text and blue selection -->
+		<style name="combobox_container_style" bgalpha="1.0" bgcolor="0xFFFFFF" bgborder="1 0xFFFFFF 0.5" bgroundedge="1" bgshadow="0 1 3 0x000000 1.0" />
+		<style name="combobox_marker_style" css="color:#FFFFFF;" bg="false" txtshadow="0 0 2 0x000000 1" />
+		<style name="combobox_item_style" css="color:#222222;" padding="4 4" bg="false" bgcolor="0xC7E4FC" bgalpha="1.0" bgroundedge="1" txtshadow="0 0 1 0xFFFFFF 1.0" />
+	</combobox_design>
+
+	<combobox_design name="vtour" margin="4" open_close_speed="0.25">
+		<!-- default vtourskin.xml design -->
+		<style name="combobox_container_style" bgalpha="0.8" bgcolor="0x2D3E50" bgborder="0" bgroundedge="1" bgshadow="0 4 10 0x000000 0.3" />
+		<style name="combobox_marker_style" css="color:#FFFFFF;" bg="false" txtshadow="0 0 2 0x000000 1" />
+		<style name="combobox_item_style" css="color:#FFFFFF;" padding="4 4" bg="false" bgcolor="0xFFFFFF" bgalpha="0.5" bgroundedge="0" txtshadow="0 0 2 0x000000 1" />
+	</combobox_design>
+
+
+	<!-- internal events -->
+	<events name="combobox_xml_plugin_events" keep="true"
+	        onxmlcomplete="combobox_parse_xml_elements();"
+	        onresize="combobox_closelist();"
+	        />
+
+
+	<!-- krpano version check -->
+	<action name="combobox_versioncheck" autorun="preinit">
+		if(build LT '2017-09-13',
+			error('combobox.xml - too old krpano version!');
+			set(events[combobox_xml_plugin_events].name, null);
+			set(action[addComboboxLayer].content, '');
+			set(action[removeComboboxLayer].content, '');
+		);
+	</action>
+
+
+	<!-- convert all <combobox> elements to layers -->
+	<action name="combobox_parse_xml_elements" scope="localonly">
+		if(global.combobox,
+			copy(combobox_src, global.combobox);
+			delete(global.combobox);
+			def(i, integer, 0);
+			def(cnt, integer, get(combobox_src.count));
+			if(cnt GT 0, loop(i LT cnt,
+				copy(cb, combobox_src[get(i)]);
+				if(cb AND cb.name AND cb.parsed != true,
+					set(cb.parsed, true);
+					addComboboxLayer(get(cb.name), get(cb.design));
+					copy(ly, global.layer[get(cb.name)]);
+					copyattributes(get(ly), get(cb));
+					set(ly.keep, true);
+					def(item_cnt, integer, get(cb.item.count));
+					if(item_cnt GT 0,
+						def(item_i, integer, 0);
+						loop(item_i LT  item_cnt,
+							combobox_additem(get(ly.name), get(cb.item[get(item_i)].name), get(cb.item[get(item_i)].caption), get(cb.item[get(item_i)].onclick));
+							inc(item_i);
+						);
+					);
+				);
+				inc(i);
+			));
+		);
+	</action>
+
+
+	<!-- dynamically add a combobox layer -->
+	<action name="addComboboxLayer" scope="localonly" args="cbname, design">
+		<!-- create the layer -->
+		addlayer(get(cbname));
+		copy(cb, global.layer[get(cbname)]);
+		set(cb.keep, true);
+		
+		<!-- copy the design settings (or set defaults) -->
+		if(!global.combobox_design[get(design)].name, set(design,'default'));
+		copy(cb.cbdesign, global.combobox_design[get(design)]);
+		calc(cb.margin, cb.cbdesign.margin !== null ? cb.cbdesign.margin : 2);
+		calc(cb.open_close_speed, cb.cbdesign.open_close_speed !== null ? cb.cbdesign.open_close_speed : 0.25);
+		<!-- load the styles and copy the design style settings -->
+		cb.loadstyle(combobox_container_style);
+		copyattributes(get(cb), get(cb.cbdesign.style[combobox_container_style]));
+
+		<!-- add/build/map actions -->
+		calc(cb.addItem,          'combobox_additem(' + cbname + ', null, "%%1", "%%2");');
+		calc(cb.addNamedItem,     'combobox_additem(' + cbname + ', "%%1", "%%2", "%%3");');
+		calc(cb.addIdItem,        'combobox_additem(' + cbname + ', "%%1", "%%2", "%%3");');
+		calc(cb.selectItem,       'combobox_finditem(' + cbname + ', "%%1", __cb_fi); if(__cb_fi GE 0, combobox_selectitem(' + cbname + ', get(__cb_fi))); delete(__cb_fi);');
+		calc(cb.selectItemByName, 'combobox_selectitem(' + cbname + ', "%%1");');
+		calc(cb.selectIdItem,     'combobox_selectitem(' + cbname + ', "%%1");');
+		calc(cb.removeAll,        'combobox_removeitems(' + cbname + ');');
+		calc(cb.openList,         'combobox_openlist(' + cbname + ');');
+		calc(cb.closeList,        'combobox_closelist(' + cbname + ');');
+
+		<!-- create sub-layers -->
+		calc(saname, 'combobox_' + cbname + '_scrollarea');
+		addlayer(get(saname));
+		copy(sa, global.layer[get(saname)]);
+		copy(sa.parent, cbname);
+		copy(sa.url, global.combobox_scrollareaplugin.url);
+		copy(sa.keep, true);
+		copy(sa.align, lefttop);
+		set(sa.direction, v);
+		set(sa.enabled, false);
+		set(sa.width, 100%);
+		set(sa.height, 100%);
+		copy(cb.scrollarea, sa);
+
+		calc(mkname, 'combobox_' + cbname + '_marker');
+		addlayer(get(mkname));
+		copy(mk, global.layer[get(mkname)]);
+		copy(mk.parent, saname);
+		copy(mk.keep, true);
+		mk.loadstyle(combobox_marker_style);
+		copyattributes(get(mk), get(cb.cbdesign.style[combobox_marker_style]));
+		copy(cb.marker, mk);
+
+		<!-- item data array -->
+		cb.createarray('item');
+
+		<!-- item autosizing information -->
+		set(cb.autosize_i, 0);
+		set(cb.autosize_cnt, 0);
+		set(cb.autosize_max_w, 0);
+		set(cb.autosize_max_h, 0);
+
+		set(cb.lastselecteditemindex, 0);
+		set(cb.selecteditemindex, 0);
+	</action>
+
+
+	<!-- dynamically remove a combobox element -->
+	<action name="removeComboboxLayer" scope="localonly" args="cbname">
+		if(global.layer[get(cbname)],
+			copy(cb, global.layer[get(cbname)]);
+			if(cb === global.openedcombobox, delete(global.openedcombobox));
+			if(cb,
+				removelayer(get(cbname), true);
+			);
+		);
+	</action>
+
+
+	<!-- default onclick event for combobox elements: open the list -->
+	<action name="combobox_onclick_event">
+		combobox_openlist(get(name));
+	</action>
+
+
+	<!-- dynamically add items -->
+	<action name="combobox_additem" scope="localonly" args="cbname, itemname, itemcaption, itemonclick">
+		copy(cb, global.layer[get(cbname)]);
+		
+		<!-- when no item name is set, generate an automatic one -->
+		if(itemname === null, calc(itemname, 'autoname_' + cb.item.count); );
+		
+		<!-- save the item caption and onclick event -->
+		copy(cb.item[get(itemname)].caption, itemcaption);
+		copy(cb.item[get(itemname)].onclick, itemonclick);
+
+		inc(cb.autosize_cnt);
+
+		<!-- create the item layer/textfield -->
+		calc(itemlayername, 'comboboxitem_' + cbname + '_' + itemname);
+		addlayer(get(itemlayername));
+		copy(li, global.layer[get(itemlayername)]);
+		li.loadstyle(combobox_item_style);
+		copyattributes(get(li), get(cb.cbdesign.style[combobox_item_style]));
+		copy(li.parent, cb.scrollarea.name);
+		copy(li.keep, true);
+		copy(li.cblayername, cb.name);
+		copy(li.itemname, itemname);
+		copy(li.html, itemcaption);
+		set(li.onautosized, delayedcall(0,combobox_item_autosize_update()) );
+		set(li.onclick, combobox_item_onclick() );
+
+		copy(cb.item[get(itemname)].itemlayername, itemlayername);
+	</action>
+
+
+	<!-- onautosized callback from the item textfield -->
+	<action name="combobox_item_autosize_update" scope="localonly">
+		copy(cb, global.layer[get(caller.cblayername)]);
+		inc(cb.autosize_i);
+		Math.max(cb.autosize_max_w, caller.width);
+		Math.max(cb.autosize_max_h, caller.height);
+		if(cb.autosize_i == cb.autosize_cnt, combobox_align_items(get(cb.name)); );
+	</action>
+
+
+	<!-- align the image and set the combobox size -->
+	<action name="combobox_align_items" scope="localonly" args="cbname">
+		copy(cb, global.layer[get(cbname)]);
+		if(cb.marker.havemarkersize == false OR cb.scrollarea.loaded == false,
+			<!-- wait until everything is ready -->
+			delayedcall(calc(cb.name + '_waitformarkersize'), 0.01, combobox_align_items(get(cbname)) );
+		  ,
+			<!-- set the item positions and the combobox size -->
+			if(global.openedcombobox === cb, combobox_closelist() );
+			copy(sa, cb.scrollarea);
+			calc(itemwidth, cb.margin GT 0 ? -2 * cb.margin : '100%');
+			copy(mk_w, cb.marker.width);
+			copy(item_cnt, cb.autosize_cnt);
+
+			for(def(item_i, integer, 0), item_i LT item_cnt, inc(item_i),
+				copy(li, global.layer[get(cb.item[get(item_i)].itemlayername)]);
+				set(li.x, get(cb.margin));
+				copy(li.width, itemwidth);
+				copy(li.height, cb.autosize_max_h);
+				calc(li.y, cb.margin + item_i * (cb.autosize_max_h + cb.margin));
+			);
+
+			if(cb.width == null OR cb.width == cb.lastautosizedwidth,
+				<!-- no combobox width (or an autosized width) set - set the largest item width -->
+				calc(cb.width, cb.margin + cb.autosize_max_w + 2 + mk_w + cb.margin);
+				copy(cb.lastautosizedwidth, cb.width);
+			);
+
+			calc(cb.height, 2*cb.margin + cb.autosize_max_h);
+			calc(sa.height, cb.margin + item_cnt*(cb.margin+cb.autosize_max_h));
+			calc(sa.y, -(cb.selecteditemindex * (cb.autosize_max_h + cb.margin)));
+			calc(cb.marker.x, cb.margin + mk_w/2);
+			tween(global.layer[get(cb.name)].marker.y, calc(cb.margin + cb.selecteditemindex*(cb.autosize_max_h + cb.margin) + cb.autosize_max_h/2), 0.1);
+
+			<!-- when all is done, show the combobox -->
+			delayedcall(0.1, set(global.layer[get(cb.name)].visible,true); );
+		);
+	</action>
+
+
+	<!-- helper action for calling a plugin event-code with 'global' and 'caller' scope -->
+	<action name="combobox_do_event_call" scope="local" args="cb, eventcode">
+		if(eventcode !== null, callwith(cb, get(eventcode) ); );
+	</action>
+	
+
+	<!-- default onclick event for items: select the current item, close the list and call the item onclick event -->
+	<action name="combobox_item_onclick" scope="localonly">
+		copy(cb, global.layer[get(caller.cblayername)]);
+		copy(itemname, caller.itemname);
+		combobox_selectitem(get(cb.name), get(itemname));
+
+		if(global.openedcombobox === cb, combobox_closelist() );
+
+		if(cb.item[get(itemname)].onclick,
+			if(cb.callonclickafterclose === false,
+				<!-- call instantly -->
+				combobox_do_event_call(get(cb), get(cb.item[get(itemname)].onclick));
+			  ,
+				<!-- call the onclick event after the combobox has closed -->
+				delayedcall(get(cb.open_close_speed),
+					copy(cb.curitem, cb.item[get(itemname)]);
+					combobox_do_event_call(get(cb), get(cb.item[get(itemname)].onclick));
+				);
+			);
+		);
+	</action>
+
+
+	<!-- select an item -->
+	<action name="combobox_selectitem" scope="localonly" args="cbname, itemname">
+		if(global.combbox_item_pressed != true,
+			copy(cb, global.layer[get(cbname)]);
+			copy(cb.lastselecteditemindex, cb.selecteditemindex);
+			copy(cb.selecteditemindex, cb.item[get(itemname)].index);
+			<!-- call onchange event on selection change -->
+			if(cb.lastselecteditemindex != cb.selecteditemindex AND cb.onchange,
+				combobox_do_event_call(get(cb), get(cb.onchange));
+			);
+			if(global.openedcombobox === cb,
+				<!-- when opened, just close to the selected item -->
+				combobox_closelist();
+			  ,
+				if(global.layer[get(cbname)].scrollarea.loaded,
+					global.layer[get(cbname)].scrollarea.stopscrolling();
+					calc(offset, cb.selecteditemindex*(cb.autosize_max_h + cb.margin));
+					tween(global.layer[get(cbname)].marker.y, calc(cb.margin + offset + cb.autosize_max_h/2), 0);
+					tween(global.layer[get(cbname)].scrollarea.y, calc(-offset), 0, default, global.layer[get(cbname)].scrollarea.update(); );
+				);
+			);
+		);
+	</action>
+
+
+	<!-- find an item by its caption, the global variable defined in 'returnvariable' will contain the index  -->
+	<action name="combobox_finditem" scope="localonly" args="cbname, itemcaption, returnvariable">
+		copy(cb, global.layer[get(cbname)]);
+		copy(item_cnt, cb.item.count);
+		set(calc('global.' + returnvariable), -1);
+		for(def(item_i, integer, 0), item_i LT  item_cnt, inc(item_i),
+			if(cb.item[get(item_i)].caption == itemcaption,
+				copy(calc('global.' + returnvariable), item_i);
+				copy(item_i, item_cnt);
+			);
+		);
+	</action>
+
+
+	<!-- remove all items (to be able to add new ones) -->
+	<action name="combobox_removeitems" scope="localonly" args="cbname">
+		copy(cb, global.layer[get(cbname)]);
+		if(global.openedcombobox === cb, combobox_closelist() );
+
+		<!-- remove all item layers -->
+		calc(item_i, cb.item.count - 1);
+		loop(item_i GE 0,
+			removelayer(get(cb.item[get(item_i)].itemlayername));
+			dec(item_i);
+		);
+
+		<!-- reset the item information -->
+		set(cb.item.count, 0);
+		set(cb.autosize_i,0);
+		set(cb.autosize_cnt, 0);
+		set(cb.autosize_max_w, 0);
+		set(cb.autosize_max_h, 0);
+		set(cb.selecteditemindex, 0);
+		set(cb.lastselecteditemindex, 0);
+		if(cb.width == cb.lastautosizedwidth, set(cb.width, null));
+	</action>
+
+
+	<!-- open the combobox list -->
+	<action name="combobox_openlist" scope="localonly" args="cbname">
+		<!-- if another combobox is already open, close that one first -->
+		if(global.openedcombobox !== null, combobox_closelist() );
+
+		copy(cb, global.layer[get(cbname)]);
+		copy(global.openedcombobox, cb);
+
+		<!-- find the available screen space above or below the combobox -->
+		calc(cbheight, 2*cb.margin + cb.autosize_max_h);
+		set(lx1, 0);
+		set(ly1, 0);
+		copy(lx2, cb.pixelwidth);
+		copy(ly2, cbheight);
+		layertoscreen(get(cbname), lx1,ly1, lx1,ly1);
+		layertoscreen(get(cbname), lx2,ly2, lx2,ly2);
+		calc(space_above, ly1 - global.area.pixely);
+		calc(space_below, global.area.pixelheight - (ly2 - global.area.pixely));
+
+		<!-- the required space for full opening: -->
+		calc(openheight, cb.margin + cb.autosize_cnt*(cb.margin+cb.autosize_max_h) );
+
+		<!-- vertical centered alignment? -->
+		calc(cb_edge, cb.edge ? cb.edge : cb.align);
+		calc(iscentered, cb_edge == 'left' OR cb_edge == 'center' OR cb_edge == 'right');
+		if(iscentered,
+			calc(openheight_max, space_above + space_below);
+		  ,
+			Math.max(openheight_max, space_above, space_below);
+		);
+
+		<!-- limit the height to the available space (minus some margin) -->
+		Math.min(openheight, calc(openheight_max + cbheight - 20));
+
+		<!-- need vertical offset? (depending on the available space and the align/edge setting) -->
+		set(yoffset, null);
+		calc(top_overflow, -ly1 + global.area.pixely + openheight/2);
+		calc(bottom_overflow, ly2 - global.area.pixely + openheight/2 - global.area.pixelheight);
+		if(cb.parent,
+			<!-- no vertical offset inside other layers, do only a height clipping -->
+			Math.max(max_overflow, top_overflow, bottom_overflow, 0);
+			sub(openheight, max_overflow);
+		  ,
+			if(iscentered,
+				if(openheight GE (global.area.pixelheight - 20),
+					set(yoffset,0);
+				  ,
+					if(top_overflow GT 0, calc(yoffset, cb.y + top_overflow); );
+					if(bottom_overflow GT 0, calc(yoffset, cb.y - bottom_overflow); );
+				);
+			,
+				indexoftxt(isbottomalign, get(cb_edge), 'bottom');
+				if(space_above GT space_below,
+					if(isbottomalign LT 0, calc(yoffset, cb.y - openheight + cbheight); );
+				  ,
+					if(isbottomalign GE 0, calc(yoffset, cb.y - openheight + cbheight); );
+				);
+			);
+		);
+		if(yoffset != null,
+			copy(cb.ybackup, cb.y);
+			tween(global.layer[get(cbname)].y, calc(yoffset), get(cb.open_close_speed));
+		);
+
+		<!-- center the opened list at the selected item -->
+		calc(centeritem_y, -1 * (cb.margin + cb.selecteditemindex*(cb.margin+cb.autosize_max_h) + cb.autosize_max_h/2 - openheight/2));
+		clamp(centeritem_y, calc(openheight - cb.scrollarea.height), 0);
+
+		<!-- apply the changes now -->
+		tween(global.layer[get(cbname)].height, get(openheight), get(cb.open_close_speed));
+		tween(global.layer[get(cbname)].scrollarea.y, get(centeritem_y), get(cb.open_close_speed), default, global.layer[get(cbname)].scrollarea.update(); );
+
+		<!-- special html5/flash case:
+			 rotating textfields (the marker symbol here) are not possible in
+			 flash (a flashplayer limitation), so use a rotated symbol instead.
+		-->
+		if(device.html5,
+			tween(global.layer[get(cbname)].marker.rotate, 90, get(cb.open_close_speed));
+		  ,
+			set(global.layer[get(cbname)].marker.html, '◀');
+		);
+
+		<!-- enable the scrollarea to allow the user to drag it -->
+		set(cb.scrollarea.enabled, true);
+
+		<!-- install a global onmousedown event to close the list when clicking at the pano -->
+		set(global.events[combobox_xml_plugin_events].onmousedown, combobox_closelist() );
+	</action>
+
+
+	<!-- close the current open list -->
+	<action name="combobox_closelist" scope="localonly">
+		if(global.openedcombobox !== null,
+			copy(cb, global.openedcombobox);
+			delete(global.openedcombobox);
+			
+			<!-- clear the global onmousedown event -->
+			set(global.events[combobox_xml_plugin_events].onmousedown, null);
+
+			<!-- disable the dragging -->
+			set(cb.scrollarea.enabled, false);
+
+			<!-- closing animations -->
+			calc(offset, cb.selecteditemindex*(cb.autosize_max_h + cb.margin));
+			if(cb.ybackup !== null, tween(cb.y, get(cb.ybackup), get(cb.open_close_speed)));
+			global.layer[get(cb.name)].scrollarea.stopscrolling();
+			tween(global.layer[get(cb.name)].height, calc(2*cb.margin + cb.autosize_max_h), get(cb.open_close_speed));
+			tween(global.layer[get(cb.name)].scrollarea.y, calc(-offset), get(cb.open_close_speed), default, global.layer[get(cb.name)].scrollarea.update(); );
+			tween(global.layer[get(cb.name)].marker.y, calc(cb.margin + offset + cb.autosize_max_h/2), get(cb.open_close_speed));
+			<!-- special html5/flash case: rotate marker or change symbol -->
+			if(device.html5,
+				tween(global.layer[get(cb.name)].marker.rotate, 0, get(cb.open_close_speed));
+			  ,
+				set(global.layer[get(cb.name)].marker.html, '▼');
+			);
+		);
+	</action>
+
+</krpano>

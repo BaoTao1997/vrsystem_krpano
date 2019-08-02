@@ -1,0 +1,891 @@
+<krpano>
+	<!--
+		webvr.xml
+		- krpano 1.19-pr14
+	-->
+
+	<!-- load the WebVR plugin and assign it to a 'webvr' variable for easier usage -->
+	<plugin name="webvr" devices="html5" keep="true"
+	        url="webvr.js"
+	        onloaded="copy(webvr, plugin[webvr]);"
+	        mousespeed="0.00125"
+	        multireslock="true"
+	        fullscreen_mirroring="true"
+	        mobilevr_support="true"
+	        mobilevr_ipd="63.5"
+	        mobilevr_screensize="auto"
+	        mobilevr_lens_overlap="1.0"
+	        mobilevr_lens_fov="96"
+	        mobilevr_lens_dist="0.6"
+	        mobilevr_lens_dist2="1|0|0|0"
+	        mobilevr_lens_ca="0.0"
+	        mobilevr_lens_vign="100"
+	        mobilevr_wakelock="true"
+	        mobilevr_sensor_mode="3"
+	        mobilevr_autocalibration="false"
+	        mobilevr_touch_support="true"
+	        mobilevr_fake_support="false"
+	        vr_cursor="hotspot[vr_cursor]"
+	        vr_cursor_enabled="true"
+	        vr_cursor_onover="if(handcursor, tween(hotspot[vr_cursor].scale,0.4,0.1); vr_auto_click(get(vr_timeout)); );"
+	        vr_cursor_onout="tween(hotspot[vr_cursor].scale,0.3,0.1);"
+	        onavailable="webvr_onavailable();"
+	        onunavailable=""
+	        onunknowndevice="webvr_onunknowndevice();"
+	        onentervr="webvr_onentervr();"
+	        onexitvr="webvr_onexitvr();"
+	        />
+
+	
+	<!-- a custom xml data structure with the supported VR headsets -->
+	<vrheadsets>
+		<headset name="cb1" caption="Cardboard A"   overlap="1.10" fov="96.0"  dist="1.00" dist2="1|0|0|0" ca="0.000" vig="100" />
+		<headset name="cb2" caption="Cardboard B"   overlap="1.00" fov="96.0"  dist="0.60" dist2="1|0|0|0" ca="0.000" vig="100" />
+		<headset name="gvr" caption="GearVR"        overlap="1.00" fov="112.0" dist="0.95" dist2="1|0|0|0" ca="0.090" vig="100" />
+		<headset name="hom" caption="HOMiDO"        overlap="1.00" fov="101.0" dist="1.10" dist2="1|0|0|0" ca="0.075" vig="100" />
+		<headset name="one" caption="VR ONE"        overlap="1.00" fov="109.9" dist="0.00" dist2="1.139|0.093|0.018|0.207" ca="0.090" vig="35" />
+		<headset name="ccr" caption="ColorCross VR" overlap="1.00" fov="70.0"  dist="0.65" dist2="1|0|0|0" ca="0.000" vig="100" />
+		<headset name="nod" caption="No Distortion" overlap="1.00" fov="96.0"  dist="0.00" dist2="1|0|0|0" ca="0.000" vig="100" />
+	</vrheadsets>
+
+
+	<!-- the VR cursor hotspot -->
+	<hotspot name="vr_cursor" keep="true"
+	         url="webvr_cursor_80x80_17f.png"
+	         visible="false"
+	         enabled="false"
+	         distorted="true"
+	         crop="0|0|80|80"
+	         scale="0.3"
+	         depth="1000"
+	         />
+
+
+	<!-- vr_auto_click() - call this action in the onover event of a
+	     hotspot to trigger automatically a click after some time.  -->
+	<action name="vr_auto_click" scope="local" args="vr_aclk_timeout">
+		if(webvr.isenabled,
+			if(vr_aclk_timeout == null, set(vr_aclk_timeout, 2000));
+			copy(vr_aclk_t1, timertick);
+			set(vr_aclk_waiting, true);
+			copy(webvr.vr_aclk_hotspot, caller.name);
+			set(hotspot[vr_cursor].crop,'0|0|80|80');
+
+			asyncloop(vr_aclk_waiting AND webvr.vr_aclk_hotspot == caller.name,
+				sub(dt, timertick, vr_aclk_t1);
+
+				if(!caller.hovering,
+					set(vr_aclk_waiting, false);
+					set(hotspot[vr_cursor].crop,'0|0|80|80');
+				  ,
+					div(f, dt, vr_aclk_timeout);
+					mul(f, 16);
+					roundval(f);
+					Math.min(f, 16);
+					mul(f, 80);
+
+					txtadd(hotspot[vr_cursor].crop,get(f),'|0|80|80');
+
+					<!-- wait another 100ms delay after finishing the animation before doing the click -->
+					sub(dt, 100);
+					if(dt GT vr_aclk_timeout,
+						set(vr_aclk_waiting,false);
+						set(hotspot[vr_cursor].crop,'0|0|80|80');
+						<!-- call onclick -->
+						callwith(caller, onclick() );
+					);
+				);
+			);
+		);
+	</action>
+
+
+	<!-- by pressing SPACE the headset could be re-centered -->
+	<events name="webvr_events" devices="html5" keep="true"
+	        onkeydown="if(webvr AND webvr.isenabled AND keycode==32, webvr.resetSensor() );"
+	        onmousedown="if(webvr AND webvr.isenabled, webvr_showbuttons() );"
+	        onexitfullscreen="vr_setup_close();"
+	        />
+
+
+
+	<!-- when WebVR support is available show an EnterVR button -->
+	<action name="webvr_onavailable">
+		webvr.loadsettings();
+		if(layer[webvr_enterbutton], delayedcall(0.5, tween(layer[webvr_enterbutton].alpha,1.0); ); );
+	</action>
+	
+	
+	<action name="webvr_onunknowndevice">
+		if(webvr.isfake AND device.desktop AND webvr.havesettings == false,
+			<!-- set the 'no distortion' headset for fake desktop usage -->
+			set(webvr.mobilevr_lens_overlap, 1.0);
+			set(webvr.mobilevr_lens_fov, 96.0);
+			set(webvr.mobilevr_lens_dist, 0.0);
+			set(webvr.mobilevr_lens_dist2, '1|0|0|0');
+			set(webvr.mobilevr_lens_ca, 0.0);
+			set(webvr.mobilevr_lens_vign, 100);
+		  ,
+			set(webvr.ask_user_for_screensize,true);
+		);
+	</action>
+
+
+	<action name="webvr_onentervr">
+		if(layer[webvr_enterbutton], tween(layer[webvr_enterbutton].alpha,0,0); );
+
+		webvr_showbuttons();
+		webvr_hide_all_non_vr_layers();
+
+		<!-- when the screen size is unknown an no custom size is set, open the setup screen on entering the VR mode -->
+		if(webvr.ismobilevr == true AND !webvr.isfake AND webvr.ask_user_for_screensize == true AND webvr.mobilevr_screensize == 'auto',
+			set(webvr.ask_user_for_screensize, false);
+			vr_setup();
+		);
+		if(webvr.isfake,
+			webvr_show_fakemode_info(true);
+		);
+	</action>
+
+
+	<action name="webvr_onexitvr">
+		stopdelayedcall(vr_button_fadeout);
+
+		if(layer[webvr_enterbutton], tween(layer[webvr_enterbutton].alpha,1); );
+		tween(layer[webvr_exitbutton].alpha,0);
+		tween(layer[webvr_setupbutton].alpha,0);
+		
+		webvr_show_fakemode_info(false);
+
+		webvr_restore_layers();
+	</action>
+
+
+	<action name="webvr_hide_all_non_vr_layers" scope="local">
+		for(set(i,0), i LT layer.count, inc(i),
+			copy(lr, layer[get(i)]);
+			if(lr.vr !== true,
+				copy(lr.vr_backup_visible, lr.visible);
+				set(lr.visible, false);
+			);
+		);
+	</action>
+
+	<action name="webvr_restore_layers" scope="local">
+		for(set(i,0), i LT layer.count, inc(i),
+			copy(lr, layer[get(i)]);
+			if(lr.vr_backup_visible,
+				copy(lr.visible, lr.vr_backup_visible);
+				delete(lr.vr_backup_visible);
+			);
+		);
+	</action>
+	
+	<action name="webvr_show_fakemode_info" scope="local" args="show">
+		if(show == true,
+			addlayer(webvr_fakemode_info);
+			set(layer[webvr_fakemode_info],
+				type='text',
+				keep=true,
+				align='bottom',
+				y=80,
+				bg=false,
+				css='color:#FFFFFF;text-align:center;',
+				html='[i][u]Simulated WebVR Mode![/u][/i][br]For real WebVR with headset tracking, either use a [a href="http://webvr.info" target="_blank" style="color:#FFFFFF;"]WebVR-API-capable[/a] desktop browser or a mobile device and a VR headset.'
+			);
+		  ,
+			removelayer(webvr_fakemode_info);
+		);
+	</action>
+	
+	
+	<!-- ensure the same scaling on mobiles (regardless if mobilescale is 0.5 or 1.0) -->
+	<krpano webvr_setup_scale="calc:(1.0 + 1.0*(device.mobile AND stagescale LT 1.0)) / (1.0 + 1.0*device.mobile)"
+	        webvr_button_scale.normal="1.0"
+	        webvr_button_scale.mobile="1.6"
+	        />
+
+	
+	<!-- the EnterVR/ExitVR and SetupVR buttons -->
+	<style name="webvr_button_style"
+	       type="text"
+	       bgcolor="0x000000"
+	       bgalpha="0.5"
+	       bgroundedge="calc:9*webvr_setup_scale*webvr_button_scale"
+	       css="calc:'color:#FFFFFF;font-size:' + 20*webvr_setup_scale*webvr_button_scale + 'px;'"
+	       padding="calc:6*webvr_setup_scale*webvr_button_scale + ' ' + 10*webvr_setup_scale*webvr_button_scale"
+	       />
+	
+	<layer name="webvr_enterbutton" keep="true" vr="true"
+	       style="webvr_button_style"
+	       html="Enter VR"
+	       align="top" y="24"
+	       autoalpha="true" alpha="0.0"
+	       onclick="webvr.enterVR();"
+	       />
+
+	<layer name="webvr_exitbutton" keep="true" vr="true"
+	       style="webvr_button_style"
+	       html="Exit VR"
+	       align="top" y="24"
+	       autoalpha="true" alpha="0.0"
+	       onclick="webvr.exitVR();"
+	       />
+
+	<layer name="webvr_setupbutton" keep="true" vr="true"
+	       style="webvr_button_style"
+	       html="VR Setup"
+	       align="bottom" y="24"
+	       autoalpha="true" alpha="0.0"
+	       onclick="vr_setup();"
+	       />
+
+
+	<action name="webvr_showbuttons">
+		stopdelayedcall(vr_button_fadeout);
+		if(webvr.ismobilevr,
+			tween(layer[webvr_exitbutton].alpha|layer[webvr_setupbutton].alpha, 1.0|1.0, 0.25);
+			delayedcall(vr_button_fadeout, 3.0, tween(layer[webvr_exitbutton].alpha|layer[webvr_setupbutton].alpha, 0.0|0.0, 1.0); );
+		  ,
+			tween(layer[webvr_exitbutton].alpha, 1.0, 0.25);
+			delayedcall(vr_button_fadeout, 3.0, tween(layer[webvr_exitbutton].alpha, 0.0, 1.0); );
+		);
+	</action>
+
+
+
+	<!--
+		VR Setup
+	-->
+
+	<action name="vr_setup" scope="local">
+		
+		<!-- store the setup settings in a 'vrsetup' object -->
+		if(webvr.vrsetup === null, def(webvr.vrsetup, object); );
+		copy(vrs, webvr.vrsetup);
+		
+		<!-- disable cursor -->
+		set(webvr.vr_cursor_enabled, false);
+		
+		<!-- hide VR buttons -->
+		tween(layer[webvr_exitbutton].alpha,0);
+		tween(layer[webvr_setupbutton].alpha,0);
+		
+		<!-- create darken-background layer -->
+		addlayer(vr_setup_darken);
+		set(layer[vr_setup_darken], type='container', safearea=false, bgcolor=0x000000, bgalpha=0.5, bgcapture=true, handcursor=false, align='lefttop', width='100%', height='100%', zorder=99998);
+		
+		<!-- create element container -->
+		addlayer(vr_setup_bg);
+		set(layer[vr_setup_bg], type='container', handcursor=false, align='lefttop', width='100%', height='100%', zorder=99999);
+		
+		
+		<!-- get and prepare device infos and settings -->
+		copy(i_screensize, webvr.mobilevr_screensize);
+		if(i_screensize == 'auto', copy(i_screensize, webvr.devicesize));
+		if(i_screensize LE 0, set(i_screensize, 5.0));
+		roundval(i_screensize, 1);
+		txtadd(i_screensize, ' inch');
+
+		copy(i_ipd, webvr.mobilevr_ipd);
+		roundval(i_ipd, 1);
+		txtadd(i_ipd, ' mm');
+
+		copy(i_fov, webvr.mobilevr_lens_fov);
+		roundval(i_fov, 1);
+
+		copy(i_dist, webvr.mobilevr_lens_dist);
+		roundval(i_dist, 2);
+		
+		copy(i_dist2, webvr.mobilevr_lens_dist2);
+		txtsplit(i_dist2, '|', vrs.i_dist2_k1, vrs.i_dist2_k2, vrs.i_dist2_k3, vrs.i_dist2_k4);
+		mul(vrs.i_dist2_k1,1);
+		mul(vrs.i_dist2_k2,10);
+		mul(vrs.i_dist2_k3,10);
+		mul(vrs.i_dist2_k4,10);
+		roundval(vrs.i_dist2_k1,2);
+		roundval(vrs.i_dist2_k2,2);
+		roundval(vrs.i_dist2_k3,2);
+		roundval(vrs.i_dist2_k4,2);
+
+		copy(i_vig, webvr.mobilevr_lens_vign);
+		roundval(i_vig, 0);
+		
+		copy(i_overlap, webvr.mobilevr_lens_overlap);
+		roundval(i_overlap, 2);
+		
+		copy(i_ca, webvr.mobilevr_lens_ca);
+		roundval(i_ca, 3);
+
+		set(i_headset, 'Custom');
+		for(set(i,0), i LT vrheadsets.headset.count, inc(i),
+			copy(hs, vrheadsets.headset[get(i)]);
+			if(i_overlap == hs.overlap AND i_fov == hs.fov AND i_dist == hs.dist AND i_dist2 == hs.dist2 AND i_ca == hs.ca AND i_vig == hs.vig,
+				copy(i_headset, hs.caption);
+			);
+		 );
+
+		<!-- when the screen size is unknown, mark it red -->
+		set(known_size, true);
+		set(sizcol, #FFFFFF);
+		copy(i_devicename, webvr.devicename);
+		if(i_devicename == 'Unknown',
+			if(webvr.mobilevr_screensize == 'auto',
+				set(sizcol, #AA0000);
+				set(known_size, false);
+			  ,
+				set(i_devicename, 'Custom');
+			);
+		);
+
+		
+		<!-- create layer for the main menu -->
+		addlayer(vr_setup_m1);
+		set(layer[vr_setup_m1], type='container', parent='vr_setup_bg', align='lefttop', width='100%', height='100%');
+		
+		<!-- create layer for the headset customization menu -->
+		addlayer(vr_setup_m3);
+		set(layer[vr_setup_m3], type='container', parent='vr_setup_bg', align='lefttop', width='100%', height='100%', visible=false);
+		
+		<!-- create layer for the calibration menu -->
+		addlayer(vr_setup_m2);
+		set(layer[vr_setup_m2], type='container', parent='vr_setup_bg', align='lefttop', width='100%', height='100%', visible=false);
+		
+		<!-- create the text elements -->
+		set(vrs.vr_setup_text_parent, 'vr_setup_m1');
+		vr_setup_createtext(vr_setup_title, 'MOBILE VR SETUP',       center, center, 0, -225, #FFFFFF,     false);
+
+		vr_setup_createtext(vr_setup_dvn1, 'Device:',         center, right,  0, -145, #FFFFFF,     true, vr_setup_select('screen') );
+		vr_setup_createtext(vr_setup_dvn2, get(i_devicename), center, left,   0, -145, get(sizcol), true, vr_setup_select('screen') );
+		vr_setup_createtext(vr_setup_siz1, 'Screensize:',     center, right,  0, -105, #FFFFFF,     true, vr_setup_select('screen') );
+		vr_setup_createtext(vr_setup_siz2, get(i_screensize), center, left,   0, -105, get(sizcol), true, vr_setup_select('screen') );
+
+		vr_setup_createtext(vr_setup_ipd1, 'IPD:',            center, right,  0,  -35, #FFFFFF,     true, vr_setup_select('ipd') );
+		vr_setup_createtext(vr_setup_ipd2, get(i_ipd),        center, left,   0,  -35, #FFFFFF,     true, vr_setup_select('ipd') );
+
+		vr_setup_createtext(vr_setup_hmd1, 'VR Headset:',     center, right,  0,  +35, #FFFFFF,     true, vr_setup_select('headset') );
+		vr_setup_createtext(vr_setup_hmd2, get(i_headset),    center, left,   0,  +35, #FFFFFF,     true, vr_setup_select('headset') );
+		
+		vr_setup_createtext(vr_setup_hmd3, 'Customize',       center, center, 0,  +75, #FFFFFF,     true, set(bg,true), set(bg,false), vr_setup_customize_headset() );
+
+		if(webvr.iswebvr == false,
+			vr_setup_createtext(vr_setup_cal, 'Calibrate Gyroscope',   center, center,    0, +145, #FFFFFF,     true, set(bg,true), set(bg,false), vr_setup_calibration() );
+		);
+
+		vr_setup_createtext(vr_setup_sav, 'SAVE',          center, center, -200, +225, #FFFFFF,     true, set(bg,true), set(bg,false), vr_setup_save() );
+		vr_setup_createtext(vr_setup_rst, 'RESET',         center, center,    0, +225, #FFFFFF,     true, set(bg,true), set(bg,false), vr_setup_reset() );
+		vr_setup_createtext(vr_setup_cls, 'CLOSE',         center, center, +200, +225, #FFFFFF,     true, set(bg,true), set(bg,false), vr_setup_close() );
+		
+		<!-- and the adjusting buttons -->
+		vr_setup_createbutton(vr_setup_btn1, '&#60;', left,  left,  5%, -35, #FFFFFF, true, null);
+		vr_setup_createbutton(vr_setup_btn2, '&#62;', right, right, 5%, -35, #FFFFFF, true, null);
+		
+		
+		<!-- create the customize_headset text elements -->
+		set(vrs.vr_setup_text_parent, 'vr_setup_m3');
+		vr_setup_createtext(vr_setup_m31, 'VR HEADSET', center, center, 0, -225, #FFFFFF, false);
+		
+		vr_setup_createtext(vr_setup_fov1,  'FOV:',           center, right,  0,  -80,  #FFFFFF,    true, vr_setup_select('fov') );
+		vr_setup_createtext(vr_setup_fov2, get(i_fov),        center, left,   0,  -80,  #FFFFFF,    true, vr_setup_select('fov') );
+		vr_setup_createtext(vr_setup_dst1, 'Distortion:',     center, right,  0,  -32,  #FFFFFF,    true, vr_setup_select('dist') );
+		vr_setup_createtext(vr_setup_dst2, get(i_dist),       center, left,   0,  -32,  #FFFFFF,    true, vr_setup_select('dist') );
+		vr_setup_createtext(vr_setup_d2tx, 'Dist2:',          center, right,  0,  +16,  #FFFFFF,    true, vr_setup_select('dist2k1') );
+		vr_setup_createtext(vr_setup_d2k1, get(vrs.i_dist2_k1),   center, left,   0,  +16,  #FFFFFF,    true, vr_setup_select('dist2k1') );
+		vr_setup_createtext(vr_setup_d2k2, get(vrs.i_dist2_k2),   center, left, +100, +16,  #FFFFFF,    true, vr_setup_select('dist2k2') );
+		vr_setup_createtext(vr_setup_d2k3, get(vrs.i_dist2_k3),   center, left, +200, +16,  #FFFFFF,    true, vr_setup_select('dist2k3') );
+		vr_setup_createtext(vr_setup_d2k4, get(vrs.i_dist2_k4),   center, left, +300, +16,  #FFFFFF,    true, vr_setup_select('dist2k4') );
+		
+		
+		vr_setup_createtext(vr_setup_cac1, 'CA Corr:',        center, right,  0,  +64,  #FFFFFF,    true, vr_setup_select('ca') );
+		vr_setup_createtext(vr_setup_cac2, get(i_ca),         center, left,   0,  +64,  #FFFFFF,    true, vr_setup_select('ca') );
+		vr_setup_createtext(vr_setup_vig1, 'Vignette:',       center, right,  0, +112,  #FFFFFF,    true, vr_setup_select('vignette') );
+		vr_setup_createtext(vr_setup_vig2, get(i_vig),        center, left,   0, +112,  #FFFFFF,    true, vr_setup_select('vignette') );
+		vr_setup_createtext(vr_setup_olp1, 'Overlap:',        center, right,  0, +160,  #FFFFFF,    true, vr_setup_select('overlap') );
+		vr_setup_createtext(vr_setup_olp2, get(i_overlap),    center, left,   0, +160,  #FFFFFF,    true, vr_setup_select('overlap') );
+				
+		vr_setup_createtext(vr_setup_m35, 'CLOSE',       center, center, 0, +225, #FFFFFF, true, set(bg,true), set(bg,false), vr_setup_close_sub_menus() );
+		
+		
+		<!-- create the calibration text elements -->
+		set(vrs.vr_setup_text_parent, 'vr_setup_m2');
+		vr_setup_createtext(vr_setup_cb1, 'GYROSCOPE', center, center, 0, -225, #FFFFFF, false);
+		vr_setup_createtext(vr_setup_cb2, 'Place the device on a flat and[br]stable surface and tab calibrate[br]to correct a gyroscope drifting.', center, center, 0, -95, #FFFFFF, false, vr_setup_select('screen') );
+		vr_setup_createtext(vr_setup_cb3, 'CALIBRATE',   center, center, 0,  +55, #FFFFFF, true, set(bg,true), set(bg,false), vr_setup_do_calibration() );
+		vr_setup_createtext(vr_setup_cb4, 'RESET',       center, center, 0, +125, #FFFFFF, true, set(bg,true), set(bg,false), webvr.resetcalibration() );
+		vr_setup_createtext(vr_setup_cb5, 'CLOSE',       center, center, 0, +225, #FFFFFF, true, set(bg,true), set(bg,false), vr_setup_close_sub_menus() );
+		
+		vr_setup_createtext(vr_setup_cb6, 'Calibrating...',      bottom, center, 0, 40, #FFFFFF, false, null );
+		vr_setup_createtext(vr_setup_cb7, 'Calibration okay.',   bottom, center, 0, 40, #FFFFFF, false, null );
+		vr_setup_createtext(vr_setup_cb8, 'Calibration failed!', bottom, center, 0, 40, #FFFFFF, false, null );
+		set(layer[vr_setup_cb6].autoalpha, true);
+		set(layer[vr_setup_cb7].autoalpha, true);
+		set(layer[vr_setup_cb8].autoalpha, true);
+		set(layer[vr_setup_cb6].alpha, 0.0);
+		set(layer[vr_setup_cb7].alpha, 0.0);
+		set(layer[vr_setup_cb8].alpha, 0.0);
+		
+		
+		<!-- pre-select the screen size for adjusting when it is unknown, otherwise the IPD -->
+		if(known_size == false,
+			vr_setup_select('screen', true);
+		  ,
+			vr_setup_select('ipd', true);
+		);
+	</action>
+
+
+	<action name="vr_setup_createtext" scope="local" args="layername, text, align, edge, x, y, color, enabled, ondown, onup, onclick">
+		addlayer(get(layername));
+		set(layer[get(layername)],
+			parent=get(webvr.vrsetup.vr_setup_text_parent),
+			type='text',
+			css=calc('text-align:' + (align == 'bottom' ? 'center' : align) + ';color:' + color + ';font-size:' + (40 * webvr_setup_scale) + 'px;font-weight:bold;'),
+			padding=calc(0 + ' ' +  (8 * webvr_setup_scale)),
+			bgroundedge=calc(8 * webvr_setup_scale),
+			bg=false,
+			bgcolor=0xFFFFFF,
+			bgalpha=0.25,
+			align=get(align),
+			edge=get(edge),
+			x=calc(x * webvr_setup_scale),
+			y=calc(y * webvr_setup_scale),
+			html=get(text),
+			enabled=get(enabled),
+			ondown=get(ondown),
+			onup=get(onup),
+			onclick=get(onclick)
+		);
+	</action>
+
+
+	<action name="vr_setup_createbutton" scope="local" args="layername, text, align, edge, x, y, color, enabled, ondown, onup, onclick">
+		vr_setup_createtext(get(layername), get(text), get(align), get(edge), get(x), get(y), get(color), get(enabled), get(ondown), get(onup), get(onclick));
+		set(layer[get(layername)],
+			css=calc('vertical-align:middle;text-align:center;color:' + color + ';font-size:' + (60 * webvr_setup_scale) + 'px;font-weight:bold;'),
+			bg=true,
+			padding=0,
+			bgroundedge=calc(40 * webvr_setup_scale),
+			width=calc(70 * webvr_setup_scale),
+			height=calc(70 * webvr_setup_scale),
+			vcenter=true
+		);
+	</action>
+
+
+	<action name="vr_setup_reset" scope="local">
+		<!-- reset to the defaults -->
+		set(webvr.mobilevr_screensize, 'auto');
+		copy(i_screensize, webvr.devicesize);
+		if(i_screensize LE 0, set(i_screensize, 5.0); );
+		roundval(i_screensize, 1);
+		set(layer[vr_setup_dvn2].html, get(webvr.devicename));
+		txtadd(layer[vr_setup_siz2].html, get(i_screensize), ' inch');
+
+		set(webvr.mobilevr_ipd, 63.5);
+		copy(i_ipd, webvr.mobilevr_ipd);
+		roundval(i_ipd, 1);
+		txtadd(layer[vr_setup_ipd2].html, get(i_ipd), ' mm');
+
+		<!-- set fake custom lens settings and call 'next' headset to switch to the default 'Cardboard' settings -->
+		set(webvr.mobilevr_lens_fov, 100);
+		set(webvr.mobilevr_lens_dist, 0.5);
+		set(webvr.mobilevr_lens_dist2, '1|0|0|0');
+		set(webvr.mobilevr_lens_vign, 100);
+		set(webvr.mobilevr_lens_overlap, 1.0);
+		set(webvr.mobilevr_lens_ca, 0.0);
+		
+		if(webvr.isfake AND device.desktop,
+			<!-- select 'no distortion' headset for fake desktop usage -->
+			vr_setup_change_headset(-1);
+		  ,
+			<!-- select 'Cardboard A' headset for Mobile-VR usage -->
+			vr_setup_change_headset(+1);	
+		);
+
+		copy(vrs, webvr.vrsetup);
+		vr_setup_select(get(vrs.var), true);
+	</action>
+
+
+	<action name="vr_setup_close">
+		<!-- 2. parameter == true => remove children elements too -->
+		removelayer(vr_setup_darken, true);
+		removelayer(vr_setup_bg, true);
+		
+		<!-- enable cursor -->
+		set(webvr.vr_cursor_enabled, true);
+	</action>
+
+
+	<action name="vr_setup_save">
+		webvr.saveSettings();
+		vr_setup_close();
+	</action>
+	
+	
+	<action name="vr_setup_customize_headset" scope="local">
+		set(layer[vr_setup_darken].bgalpha, 0.1);
+		
+		set(layer[vr_setup_m1].visible,false);
+		set(layer[vr_setup_m2].visible,false);
+		set(layer[vr_setup_m3].visible,true);
+		
+		set(layer[vr_setup_hmd1].parent, vr_setup_m3);
+		set(layer[vr_setup_hmd2].parent, vr_setup_m3);
+		set(layer[vr_setup_btn1].parent, vr_setup_m3);
+		set(layer[vr_setup_btn2].parent, vr_setup_m3);
+		
+		set(layer[vr_setup_hmd1].y, calc(-145 * webvr_setup_scale));
+		set(layer[vr_setup_hmd2].y, calc(-145 * webvr_setup_scale));
+		
+		copy(vrs, webvr.vrsetup);
+		copy(vrs.old_selection, vrs.var);
+		vr_setup_select('headset');
+	</action>
+	
+	
+
+	<action name="vr_setup_calibration">
+		set(layer[vr_setup_m1].visible,false);
+		set(layer[vr_setup_m2].visible,true);
+	</action>
+	
+	
+	<action name="vr_setup_close_sub_menus" scope="local">
+		set(layer[vr_setup_darken].bgalpha, 0.5);
+		
+		set(layer[vr_setup_m1].visible,true);
+		set(layer[vr_setup_m2].visible,false);
+		set(layer[vr_setup_m3].visible,false);
+		
+		set(layer[vr_setup_hmd1].parent, vr_setup_m1);
+		set(layer[vr_setup_hmd2].parent, vr_setup_m1);
+		set(layer[vr_setup_btn1].parent, vr_setup_m1);
+		set(layer[vr_setup_btn2].parent, vr_setup_m1);
+		
+		set(layer[vr_setup_hmd1].y, calc(+35 * webvr_setup_scale));
+		set(layer[vr_setup_hmd2].y, calc(+35 * webvr_setup_scale));
+		
+		copy(vrs, webvr.vrsetup);
+		if(vrs.old_selection,
+			vr_setup_select(get(vrs.old_selection));
+			delete(vrs.old_selection);
+		);
+	</action>
+	
+	<action name="vr_setup_do_calibration">
+		if(!webvr.isfake,
+			tween(layer[vr_setup_cb6].alpha, 1.0, 0.1);
+			tween(layer[vr_setup_cb7].alpha, 0.0, 0.1);
+			tween(layer[vr_setup_cb8].alpha, 0.0, 0.1);
+			webvr.calibrate(
+				tween(layer[vr_setup_cb6].alpha, 0.0, 0.1);
+				tween(layer[vr_setup_cb7].alpha, 1.0, 0.1);
+				delayedcall(2.0, tween(layer[vr_setup_cb7].alpha, 0.0, 0.25) );
+			  ,
+				tween(layer[vr_setup_cb6].alpha, 0.0, 0.1);
+				tween(layer[vr_setup_cb8].alpha, 1.0, 0.1);
+				delayedcall(2.0, tween(layer[vr_setup_cb8].alpha, 0.0, 0.25) );
+			);
+		);
+	</action>
+
+	<action name="vr_setup_update_dist2" scope="local">
+		copy(vrs, webvr.vrsetup);
+		txtadd(webvr.mobilevr_lens_dist2, get(vrs.i_dist2_k1), '|', calc(vrs.i_dist2_k2/10.0), '|', calc(vrs.i_dist2_k3/10.0), '|', calc(vrs.i_dist2_k4/10.0));
+		vr_setup_change_headset(0);
+	</action>
+
+	<action name="vr_setup_select" scope="local" args="selected_var, noanimation">
+		copy(vrs, webvr.vrsetup);
+		
+		<!-- select a setting for adjusting -->
+		set(layer[vr_setup_siz2].bg, false);
+		set(layer[vr_setup_ipd2].bg, false);
+		set(layer[vr_setup_hmd2].bg, false);
+		set(layer[vr_setup_fov2].bg, false);
+		set(layer[vr_setup_dst2].bg, false);
+		set(layer[vr_setup_d2k1].bg, false);
+		set(layer[vr_setup_d2k2].bg, false);
+		set(layer[vr_setup_d2k3].bg, false);
+		set(layer[vr_setup_d2k4].bg, false);
+		set(layer[vr_setup_vig2].bg, false);
+		set(layer[vr_setup_cac2].bg, false);
+		set(layer[vr_setup_olp2].bg, false);
+
+		set(layer[vr_setup_btn1].ondown, vr_setup_change_ondown(-1) );
+		set(layer[vr_setup_btn2].ondown, vr_setup_change_ondown(+1) );
+		
+		set(vrs.setting, null);
+		set(vrs.var, get(selected_var));
+		set(vrs.var_value, null);
+		set(vrs.var_callback, null);
+		
+		
+
+		if(selected_var == 'screen',
+			set(vrs.setting,      vr_setup_siz2);
+			set(vrs.var_name,     'webvr.mobilevr_screensize');
+			set(vrs.var_postfix,  ' inch');
+			copy(vrs.var_value,   get(vrs.var_name));
+			if(vrs.var_value == 'auto', copy(vrs.var_value, webvr.devicesize));
+			if(vrs.var_value LE 0, set(vrs.var_value, 5.0));
+			set(vrs.var_step,     0.1);
+			set(vrs.var_min,      4);
+			set(vrs.var_max,      10);
+			set(vrs.var_round,    1);
+			set(vrs.var_callback, vr_setup_change_screen() );
+		);
+
+		if(selected_var == 'ipd',
+			set(vrs.setting,      vr_setup_ipd2);
+			set(vrs.var_name,     'webvr.mobilevr_ipd');
+			set(vrs.var_postfix,  ' mm');
+			copy(vrs.var_value,   get(vrs.var_name));
+			set(vrs.var_step,     0.1);
+			set(vrs.var_min,      40);
+			set(vrs.var_max,      80);
+			set(vrs.var_round,    1);
+		);
+
+		if(selected_var == 'headset',
+			set(vrs.setting,      vr_setup_hmd2);
+			set(layer[vr_setup_btn1].ondown, vr_setup_change_headset(-1) );
+			set(layer[vr_setup_btn2].ondown, vr_setup_change_headset(+1) );
+		);
+
+		if(selected_var == 'fov',
+			set(vrs.setting,      vr_setup_fov2);
+			set(vrs.var_name,     'webvr.mobilevr_lens_fov');
+			set(vrs.var_postfix,  '');
+			copy(vrs.var_value,   get(vrs.var_name));
+			set(vrs.var_step,     0.1);
+			set(vrs.var_min,      40);
+			set(vrs.var_max,      179);
+			set(vrs.var_round,    1);
+			set(vrs.var_callback, vr_setup_change_headset(0) );
+		);
+
+		if(selected_var == 'dist',
+			set(vrs.setting,      vr_setup_dst2);
+			set(vrs.var_name,     'webvr.mobilevr_lens_dist');
+			set(vrs.var_postfix,  '');
+			copy(vrs.var_value,   get(vrs.var_name));
+			set(vrs.var_step,     0.01);
+			set(vrs.var_min,      0);
+			set(vrs.var_max,      5);
+			set(vrs.var_round,    2);
+			set(vrs.var_callback, vr_setup_change_headset(0) );
+		);
+		
+		if(selected_var == 'dist2k1',
+			set(vrs.setting,      vr_setup_d2k1);
+			set(vrs.var_name,     'webvr.vrsetup.i_dist2_k1');
+			set(vrs.var_postfix,  '');
+			copy(vrs.var_value,   get(vrs.var_name));
+			set(vrs.var_step,     0.01);
+			set(vrs.var_min,      -9);
+			set(vrs.var_max,      +9);
+			set(vrs.var_round,    2);
+			set(vrs.var_callback, vr_setup_update_dist2() );
+		);
+		
+		if(selected_var == 'dist2k2',
+			set(vrs.setting,      vr_setup_d2k2);
+			set(vrs.var_name,     'webvr.vrsetup.i_dist2_k2');
+			set(vrs.var_postfix,  '');
+			copy(vrs.var_value,   get(vrs.var_name));
+			set(vrs.var_step,     0.01);
+			set(vrs.var_min,      -9);
+			set(vrs.var_max,      +9);
+			set(vrs.var_round,    2);
+			set(vrs.var_callback, vr_setup_update_dist2() );
+		);
+		
+		if(selected_var == 'dist2k3',
+			set(vrs.setting,      vr_setup_d2k3);
+			set(vrs.var_name,     'webvr.vrsetup.i_dist2_k3');
+			set(vrs.var_postfix,  '');
+			copy(vrs.var_value,   get(vrs.var_name));
+			set(vrs.var_step,     0.01);
+			set(vrs.var_min,      -9);
+			set(vrs.var_max,      +9);
+			set(vrs.var_round,    2);
+			set(vrs.var_callback, vr_setup_update_dist2() );
+		);
+
+		if(selected_var == 'dist2k4',
+			set(vrs.setting,      vr_setup_d2k4);
+			set(vrs.var_name,     'webvr.vrsetup.i_dist2_k4');
+			set(vrs.var_postfix,  '');
+			copy(vrs.var_value,   get(vrs.var_name));
+			set(vrs.var_step,     0.01);
+			set(vrs.var_min,      -9);
+			set(vrs.var_max,      +9);
+			set(vrs.var_round,    2);
+			set(vrs.var_callback, vr_setup_update_dist2() );
+		);
+
+		if(selected_var == 'vignette',
+			set(vrs.setting,      vr_setup_vig2);
+			set(vrs.var_name,     'webvr.mobilevr_lens_vign');
+			set(vrs.var_postfix,  '');
+			copy(vrs.var_value,   get(vrs.var_name));
+			set(vrs.var_step,     1);
+			set(vrs.var_min,      10);
+			set(vrs.var_max,      200);
+			set(vrs.var_round,    0);
+			set(vrs.var_callback, vr_setup_change_headset(0) );
+		);
+
+		if(selected_var == 'ca',
+			set(vrs.setting,      vr_setup_cac2);
+			set(vrs.var_name,     'webvr.mobilevr_lens_ca');
+			set(vrs.var_postfix,  '');
+			copy(vrs.var_value,   get(vrs.var_name));
+			set(vrs.var_step,     0.01);
+			set(vrs.var_min,      -1.0);
+			set(vrs.var_max,      +1.0);
+			set(vrs.var_round,    2);
+			set(vrs.var_callback, vr_setup_change_headset(0) );
+		);
+		  
+		if(selected_var == 'overlap',
+			set(vrs.setting,      vr_setup_olp2);
+			set(vrs.var_name,     'webvr.mobilevr_lens_overlap');
+			set(vrs.var_postfix,  '');
+			copy(vrs.var_value,   get(vrs.var_name));
+			set(vrs.var_step,     0.01);
+			set(vrs.var_min,      0.5);
+			set(vrs.var_max,      2.0);
+			set(vrs.var_round,    2);
+			set(vrs.var_callback, vr_setup_change_headset(0) );
+		);
+
+		if(vrs.setting != null,
+			set(layer[get(vrs.setting)].bg, true);
+			if(noanimation == true,
+				set(layer[vr_setup_btn1].y, get(layer[get(vrs.setting)].y));
+				set(layer[vr_setup_btn2].y, get(layer[get(vrs.setting)].y));
+			  ,
+				tween(layer[vr_setup_btn1].y, get(layer[get(vrs.setting)].y));
+				tween(layer[vr_setup_btn2].y, get(layer[get(vrs.setting)].y));
+			);
+		);
+	</action>
+
+
+	<action name="vr_setup_change_screen" scope="local">
+		set(layer[vr_setup_dvn2].html, 'Custom');
+		set(layer[vr_setup_dvn2].css, calc('color:#FFFFFF;font-size:'+40*webvr_setup_scale+'px;font-weight:bold;'));
+		set(layer[vr_setup_siz2].css, calc('color:#FFFFFF;font-size:'+40*webvr_setup_scale+'px;font-weight:bold;'));
+	</action>
+
+
+	<action name="vr_setup_change_ondown" scope="local">
+		copy(t0,timertick);
+		set(t1,0);
+		asyncloop(caller.pressed,
+			copy(t2,timertick);
+			sub(dt,t2,t1);
+			if(dt GT 100,
+				copy(t1,t2);
+				sub(dt,t1,t0);
+				div(dt,1000);
+				Math.max(dt,1);
+				mul(dt,%1);
+				vr_setup_adjust(get(dt));
+			);
+		);
+	</action>
+
+
+	<action name="vr_setup_adjust" scope="local">
+		copy(vrs, webvr.vrsetup);
+		if(vrs.setting != null,
+			mul(change, vrs.var_step, %1);
+			add(vrs.var_value, change);
+			Math.max(vrs.var_value, vrs.var_min);
+			Math.min(vrs.var_value, vrs.var_max);
+			roundval(vrs.var_value, get(vrs.var_round));
+			tween(get(vrs.var_name), get(vrs.var_value), 0.1);
+			txtadd(layer[get(vrs.setting)].html, get(vrs.var_value), get(vrs.var_postfix));
+			if(vrs.var_callback != null, vrs.var_callback());
+		);
+	</action>
+
+
+	<action name="vr_setup_change_headset" scope="local" args="indexchange">
+		set(i_headset, 'Custom');
+		if(indexchange != 0,
+			copy(i_fov, webvr.mobilevr_lens_fov);
+			roundval(i_fov, 1);
+			copy(i_dist, webvr.mobilevr_lens_dist);
+			roundval(i_dist, 2);
+			copy(i_dist2, webvr.mobilevr_lens_dist2);
+			copy(i_vig, webvr.mobilevr_lens_vign);
+			roundval(i_vig, 0);
+			copy(i_ca, webvr.mobilevr_lens_ca);
+			roundval(i_ca, 3);
+			copy(i_overlap, webvr.mobilevr_lens_overlap);
+			roundval(i_overlap, 2);
+			set(i_hsindex, -1);
+			copy(i_hscount, vrheadsets.headset.count);
+			for(set(i,0), i LT i_hscount, inc(i),
+				copy(hs, vrheadsets.headset[get(i)]);
+				if(i_overlap == hs.overlap AND i_fov == hs.fov AND i_dist == hs.dist AND i_dist2 == hs.dist2 AND i_ca == hs.ca AND i_vig == hs.vig,
+					copy(i_hsindex, i);
+					copy(i_headset, hs.caption); 
+				);
+			 );
+
+			if(indexchange GT 0,
+				add(i_hsindex, 1);
+				if(i_hsindex GE i_hscount, set(i_hsindex,0));
+			  ,
+				sub(i_hsindex, 1);
+				if(i_hsindex LT 0, sub(i_hsindex,i_hscount,1));
+			);
+
+			copy(hs, vrheadsets.headset[get(i_hsindex)]);
+			copy(i_headset, hs.caption);
+			copy(i_overlap, hs.overlap);
+			copy(i_fov,     hs.fov);
+			copy(i_dist,    hs.dist);
+			copy(i_dist2,   hs.dist2);
+			copy(i_ca,      hs.ca);
+			copy(i_vig,     hs.vig);
+		);
+
+		copy(layer[vr_setup_hmd2].html, i_headset);
+		if(indexchange != 0,
+			copy(webvr.mobilevr_lens_overlap, i_overlap);
+			copy(webvr.mobilevr_lens_fov, i_fov);
+			copy(webvr.mobilevr_lens_dist, i_dist);
+			copy(webvr.mobilevr_lens_dist2, i_dist2);
+			copy(webvr.mobilevr_lens_ca, i_ca);
+			copy(webvr.mobilevr_lens_vign, i_vig);
+			copy(layer[vr_setup_olp2].html, i_overlap);
+			copy(layer[vr_setup_fov2].html, i_fov);
+			copy(layer[vr_setup_dst2].html, i_dist);
+			
+			txtsplit(i_dist2, '|', i_dist2_k1, i_dist2_k2, i_dist2_k3, i_dist2_k4);
+			mul(i_dist2_k1,1);
+			mul(i_dist2_k2,10);
+			mul(i_dist2_k3,10);
+			mul(i_dist2_k4,10);
+			roundval(i_dist2_k1,2);
+			roundval(i_dist2_k2,2);
+			roundval(i_dist2_k3,2);
+			roundval(i_dist2_k4,2);
+			copy(layer[vr_setup_d2k1].html, i_dist2_k1);
+			copy(layer[vr_setup_d2k2].html, i_dist2_k2);
+			copy(layer[vr_setup_d2k3].html, i_dist2_k3);
+			copy(layer[vr_setup_d2k4].html, i_dist2_k4);
+			
+			copy(layer[vr_setup_cac2].html, i_ca);
+			copy(layer[vr_setup_vig2].html, i_vig);
+		);
+	</action>
+
+</krpano>

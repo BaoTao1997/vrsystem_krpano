@@ -1,0 +1,453 @@
+ul li {
+  list-style: none;
+}
+.save-view {
+  margin-top: 4px;
+}
+.hotspot-detail {
+  height: 100%;
+  width: 201px;
+  background-color: #ffffff;
+  z-index: 999;
+  position: absolute;
+  color: #1F2F3D;
+  left: 0;
+  top: 0;
+
+  .hotspot-detail-header {
+    height: 50px;
+    line-height: 50px;
+    padding-left: 10px;
+    font-size: 18px;
+    span {
+      text-align: left;
+    }
+    .delete {
+      position: absolute;
+      right: 14px;
+      top: 16px;
+      transition: All 0.8s ease-in-out;
+      -webkit-transition: All 0.8s ease-in-out;
+      -moz-transition: All 0.8s ease-in-out;
+      -o-transition: All 0.8s ease-in-out;
+      &:hover {
+        transform: rotate(360deg) scale(1.2);
+        -webkit-transform: rotate(360deg) scale(1.2);
+        -moz-transform: rotate(360deg) scale(1.2);
+        -o-transform: rotate(360deg) scale(1.2);
+        -ms-transform: rotate(360deg) scale(1.2);
+      }
+    }
+  }
+
+  .hotspot-detail-content {
+    padding: 10px 0 10px 10px;
+    label {
+      font-weight: 400;
+      font-size: 18px;
+      padding: 10px 0;
+    }
+    .hotspot-list {
+      .hotspot-item {
+        margin: 10px 10px;
+        padding: 4px 10px;
+        background-color: #50BFFF;
+        cursor: pointer;
+        border-radius:10px;
+        div {
+          line-height: 32px;
+          height: auto;
+          color: white;
+          text-align: center;
+        }
+        img {
+          height: 32px;
+          width: auto;
+          float: left;
+        }
+        &:hover {
+          box-shadow: 2px 2px 2px #888888;
+          transform:translate3d(0,-2px,0);
+        }
+      }
+      .hotspot-item-selected {
+        background-color: #67C23A;
+      }
+    }
+    .hotspot-detail-button {
+      float: left;
+      padding: 0 10px 0 10px;
+    }
+    .scene-item{
+      margin: 10px 0 10px 10px;
+      height: 168px;
+      width: 168px;
+      border: 2px #E4E7ED solid;
+      cursor: pointer;
+      padding: 0;
+      position: relative;
+      img {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+      div {
+        position: absolute;
+        bottom: 0;
+        height: 44px;
+        width: 168px;
+        text-align: center;
+        span {
+          line-height: 44px;
+        }
+      }
+      .group {
+        position: absolute;
+        left: 128px;
+        top: 0;
+        height: 128px;
+        width: 40px;
+        .button {
+          width: 40px;
+        }
+      }
+      &:hover {
+        box-shadow: 2px 2px 2px #888888;
+        transform:translate3d(0,-2px,0);
+      }
+    }
+    .scene-item-selected {
+      border-color: #409EFF;
+    }
+    .hotspot-detail-style-list {
+      width: 80px;
+      max-height: 80px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      margin-top: 10px;
+      padding-right: 12px;
+
+      .hotspot-detail-style {
+        cursor: pointer;
+        border: solid #DCDFE6 1px;
+        border-radius: 3px;
+        &:hover {
+          box-shadow: 2px 2px 2px #888888;
+          transform:translate3d(0,-2px,0);
+        }
+      }
+
+      .hotspot-detail-style-selected {
+        border-color: #409EFF;
+      }
+    }
+
+    .hotspot-detail-scene-list {
+      width: 100%;
+      //max-height: 350px;
+      overflow-y: auto;
+      overflow-x: hidden;
+
+      .hotspot-detail-scene {
+        cursor: pointer;
+        float: left;
+        position: relative;
+        padding: 10px 10px 10px 0;
+        &:hover {
+          box-shadow: 2px 2px 2px #888888;
+          transform:translate3d(0,-2px,0);
+        }
+        span {
+          position: absolute;
+          top: 74px;
+          width: 64px;
+        }
+      }
+      .hotspot-detail-scene-selected {
+        border: solid #409EFF 2px;
+      }
+    }
+  }
+}
+
+.scene-module {
+  user-select: none;
+
+  .scene-title {
+    line-height: 50px;
+    padding-left: 10px;
+    margin: 0;
+  }
+
+  .scene-item {
+    margin: 10px 0 10px 10px;
+    height: 168px;
+    width: 168px;
+    border: 2px #333333 solid;
+    cursor: pointer;
+
+    .scene-name {
+      line-height: 36px;
+      height: 36px;
+      width: 164px;
+      padding-left: 5px;
+    }
+
+    a {
+      height: 64px;
+      width: 36px;
+      background-color: rgb(70, 70, 70) !important;
+      border-radius: 0;
+      border: 0;
+      &:hover {
+        background-color: #427afb !important;
+        color: white !important;
+      }
+    }
+
+    .pencil {
+      position: relative;
+      left: 128px;
+      bottom: 128px;
+      height: 64px;
+      width: 36px;
+    }
+
+    .home {
+      position: relative;
+      left: 128px;
+      bottom: 128px;
+      height: 64px;
+      width: 36px;
+
+      .home-selected {
+        background-color: #427afb !important;
+      }
+    }
+
+    &:hover {
+      border-color: #fbd14b;
+    }
+  }
+
+  .scene-item-selected {
+    border-color: #fbd14b;
+  }
+}
+.line {
+  width: 100%;
+  height: 0;
+  border-top: solid 2px #4b4b4b;
+  user-select: none;
+}
+@mixin camera-style {
+  position: absolute;
+  z-index: 1;
+}
+.camera {
+  user-select: none;
+  .camera-button {
+    @include camera-style;
+    left: 50%;
+    top: 30%;
+    transform: translate(-61px, 0);
+    width: 132px;
+    margin-left:90px;
+  }
+
+  .camera-top {
+    @include camera-style;
+    width: 400px;
+    height: 0;
+    border-top: white 1px dotted;
+    top: 50%;
+    margin-top:150px;
+    left: 50%;
+    margin-left:-100px;
+  }
+
+  .camera-bottom {
+    @include camera-style;
+    width: 400px;
+    height: 0;
+    border-top: white 1px dotted;
+    top: 50%;
+    margin-top:-150px;
+    left: 50%;
+    margin-left:-100px;
+  }
+
+  .camera-left {
+    @include camera-style;
+    width: 0;
+    height: 300px;
+    border-left: white 1px dotted;
+    top: 50%;
+    left: 50%;
+    margin-top: -150px;
+    margin-left:-100px;
+  }
+
+  .camera-right {
+    @include camera-style;
+    width: 0;
+    height: 300px;
+    border-right: white 1px dotted;
+    top: 50%;
+    right: 50%;
+    margin-top: -150px;
+    margin-right:-300px;
+  }
+
+  .camera-left-top {
+    @include camera-style;
+    width: 0;
+    height: 48px;
+    border: white 2px solid;
+    top: 50%;
+    left: 50%;
+    margin-top: -149px;
+    margin-left:-100px;
+  }
+
+  .camera-top-left {
+    @include camera-style;
+    width: 40px;
+    height: 0;
+    border: white 2px solid;
+    top: 50%;
+    left: 50%;
+    margin-top: -150px;
+    margin-left:-100px;
+  }
+
+  .camera-top-right {
+    @include camera-style;
+    position: absolute;
+    width: 40px;
+    height: 0;
+    border: white 2px solid;
+    top: 50%;
+    right: 50%;
+    margin-top: -150px;
+    margin-right:-300px;
+  }
+
+  .camera-right-top {
+    @include camera-style;
+    position: absolute;
+    width: 0;
+    height: 48px;
+    border: white 2px solid;
+    top: 50%;
+    right: 50%;
+    margin-top: -150px;
+    margin-right:-300px;
+  }
+
+  .camera-left-bottom {
+    @include camera-style;
+    width: 0;
+    height: 48px;
+    border: white 2px solid;
+    bottom: 50%;
+    left: 50%;
+    margin-bottom: -150px;
+    margin-left: -100px;
+  }
+
+  .camera-bottom-left {
+    @include camera-style;
+    width: 40px;
+    height: 0;
+    border: white 2px solid;
+    bottom: 50%;
+    left: 50%;
+    margin-bottom: -150px;
+    margin-left: -100px;
+  }
+
+  .camera-bottom-right {
+    @include camera-style;
+    width: 40px;
+    height: 0;
+    border: white 2px solid;
+    bottom: 50%;
+    right: 50%;
+    margin-bottom: -150px;
+    margin-right: -300px;
+  }
+
+  .camera-right-bottom {
+    @include camera-style;
+    width: 0;
+    height: 48px;
+    border: white 2px solid;
+    bottom: 50%;
+    right: 50%;
+    margin-bottom: -150px;
+    margin-right: -300px;
+  }
+}
+.scrollbar {
+  //滚动条的轨道
+  ::-webkit-scrollbar-track
+  {
+    background-color: #F5F5F5;
+    &:hover {
+      background: hsla(0,0%,53%,.1);
+    }
+  }
+  //滚动条的宽度
+  ::-webkit-scrollbar {
+    width: 15px;
+    height: 15px;
+  }
+  //滚动条的滑块
+  ::-webkit-scrollbar-thumb {
+    background-color: #E4E7ED;
+    border-radius: 3px;
+    &:hover {
+      background-color: #a1a3a9;
+    }
+  }
+}
+.el-row {
+  margin-bottom: 20px;
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+.el-col {
+  border-radius: 4px;
+  text-align: center;
+  .input {
+    padding: 0;
+    width: 60px;
+    height: 40px;
+  }
+}
+.grid-content {
+  border-radius: 4px;
+  min-height: 36px;
+}
+.view-slider {
+  .view-top-slider {
+    margin-right: 11px;
+    position: relative;
+    bottom: -15px;
+    text-align: center;
+    height: 21px;
+    user-select: none;
+    span {
+      position: absolute;
+      transform: translateX(-50%);
+    }
+  }
+}
+.icon {
+  width: 1em; height: 1em;
+  vertical-align: -0.15em;
+  fill: currentColor;
+  overflow: hidden;
+}

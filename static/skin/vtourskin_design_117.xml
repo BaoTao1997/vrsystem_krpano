@@ -1,0 +1,28 @@
+﻿<krpano>
+
+	<!-- Version 1.17 Design -->
+
+	<skin_settings layout_width="100%"
+	               layout_maxwidth=""
+	               controlbar_width="100%"
+	               controlbar_height.normal="40"
+	               controlbar_height.mobile="38"
+	               controlbar_offset.normal="20"
+	               controlbar_offset.mobile="0"
+	               controlbar_offset_closed="-2"
+	               controlbar_overlap="0"
+	               design_skin_images="vtourskin.png"
+	               design_bgcolor="0x000000"
+	               design_bgalpha="0.5"
+	               design_bgborder="1,0 0xFFFFFF 1"
+	               design_bgroundedge.no-ios="0"
+	               design_bgroundedge.ios="1"
+	               design_bgshadow="0 0 20 0x000000 1.0"
+	               design_thumbborder_bgborder="4 0xFFFFFF 1.0"
+	               design_thumbborder_padding="2"
+	               design_thumbborder_bgroundedge="3"
+	               design_text_css="color:#FFFFFF; font-family:Arial; font-weight:bold;"
+	               design_text_shadow="1"
+	               />
+
+</krpano>

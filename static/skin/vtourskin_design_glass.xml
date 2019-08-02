@@ -1,0 +1,40 @@
+﻿<krpano>
+
+	<!-- Glass Design -->
+
+	<!-- modify the <skin_settings> values -->
+	<skin_settings thumbs_scrollindicator="true"
+	               layout_width="100%"
+	               layout_maxwidth="680"
+	               xcontrolbar_width="-44"
+	               controlbar_width="-20"
+	               controlbar_height="36"
+	               controlbar_offset.normal="40"
+	               controlbar_offset.mobile="12"
+	               controlbar_offset_closed="-40"
+	               controlbar_overlap="10"
+	               design_skin_images="vtourskin.png"
+	               design_bgcolor="0xFFFFFF"
+	               design_bgalpha="0.25"
+	               design_bgborder="2 0xFFFFFF 0.1"
+	               design_bgroundedge="13"
+	               design_bgshadow="0"
+	               design_thumbborder_bgborder="3 0xFFFFFF 1.0"
+	               design_thumbborder_padding="2"
+	               design_thumbborder_bgroundedge="5"
+	               design_text_css="color:#FFFFFF; font-family:Arial; font-weight:bold;"
+	               design_text_shadow="0"
+	               />
+
+	<!-- webvr button style (adjust to match default skin style) -->
+	<style name="webvr_button_style"
+	       border="true" borderwidth="2" bordercolor="0xFFFFFF" borderalpha="0.25"
+	       backgroundcolor="get:skin_settings.design_bgcolor" backgroundalpha="get:skin_settings.design_bgalpha"
+	       shadow="0"
+	       css="calc:skin_settings.design_text_css + ' color:#FFFFFF; font-weight:normal; font-size:' + 20*webvr_setup_scale*webvr_button_scale + 'px;'"
+	       />
+
+	<!-- contextmenu style (adjust to match skin style) -->
+	<contextmenu customstyle="default|default|default|0x77AAAAAA|0xFFFFFF|0xBBBBBB|2|0x7FFFFFFF|13|0|0|0|0xFFFFFF|0|0|4|6|7|0xAAFFFFFF|none|3|0|0|0|3|0xAAFFFFFF|0xAAFFFFFF|0xFFFFFF|12|8" />
+
+</krpano>

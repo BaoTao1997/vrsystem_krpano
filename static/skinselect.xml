@@ -1,0 +1,33 @@
+<krpano>
+
+	<!-- 嵌入主xml -->
+	<include url="tour.xml" />
+
+	<!-- 嵌入可选的皮肤选项 -->
+	<include url="skin/vtourskin_design_flat_light.xml"  if="design == 'flat_light'"  />
+	<include url="skin/vtourskin_design_glass.xml"       if="design == 'glass'"       />
+	<include url="skin/vtourskin_design_ultra_light.xml" if="design == 'ultra_light'" />
+	<include url="skin/vtourskin_design_117.xml"         if="design == '117'"         />
+	<include url="skin/vtourskin_design_117round.xml"    if="design == '117_round'"   />
+	<include url="skin/vtourskin_design_black.xml"       if="design == 'black'"       />
+
+	<!-- 无加载文字，保持缩略图开启或关闭状态 -->
+	<skin_settings loadingtext="" thumbs_opened="calc:skin_thumbs_last_state === 'opened' ? true : false" />
+
+	<!--<layer name="skin_selector" keep="true" type="container" align="lefttop" x="10" y="10" width="100" height="300">-->
+		<!--<layer name="skin1" style="webvr_button_style" html="默认皮肤"     align="lefttop" y="0"   onclick="change_skin_design('default');"     />-->
+		<!--<layer name="skin2" style="webvr_button_style" html="轻量皮肤"     align="lefttop" y="50"  onclick="change_skin_design('flat_light');"  />-->
+		<!--<layer name="skin4" style="webvr_button_style" html="超轻量皮肤"     align="lefttop" y="100" onclick="change_skin_design('ultra_light');" />-->
+		<!--<layer name="skin3" style="webvr_button_style" html="镜框皮肤"              align="lefttop" y="150" onclick="change_skin_design('glass');"       />-->
+		<!--<layer name="skin5" style="webvr_button_style" html="老版本皮肤"       align="lefttop" y="200" onclick="change_skin_design('117');"         />-->
+		<!--<layer name="skin6" style="webvr_button_style" html="老版本圆角皮肤" align="lefttop" y="250" onclick="change_skin_design('117_round');"   />-->
+		<!--<layer name="skin7" style="webvr_button_style" html="黑色皮肤"              align="lefttop" y="300" onclick="change_skin_design('black');"       />-->
+	<!--</layer>-->
+
+	<action name="change_skin_design">
+		set(design, %1);
+		copy(skin_thumbs_last_state, layer[skin_thumbs].state);
+		loadpanoscene('%CURRENTXML%/skinselect.xml', get(xml.scene), null, IGNOREKEEP|KEEPVIEW|KEEPMOVING, BLEND(0.5));
+	</action>
+
+</krpano>

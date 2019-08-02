@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>krpano-vrsystem</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta http-equiv="x-ua-compatible" content="IE=edge" />
+
+  <style>
+    @-ms-viewport { width:device-width; }
+    @media only screen and (min-device-width:800px) { html { overflow:hidden; } }
+    html { height:100%; }
+    body { height:100%; overflow:hidden; margin:0; padding:0; font-family:Arial, Helvetica, sans-serif; font-size:16px; color:#FFFFFF; background-color:#FFFFFF; }
+    .container {
+      display:flex;
+      height: 100%;
+      width: 100%;
+    }
+    .container .leftWrapper{
+      align-content:flex-start;
+      flex-basis: 300px;
+    }
+    .container .rightWrapper{
+      align-content:flex-end;
+      flex-basis:calc(100% - 200px);
+    }
+  </style>
+</head>
+<body>
+    <script src="/static/tour.js"></script>
+    <div class="container">
+      <div id="app" class="container leftWrapper"></div>
+      <div id="pano" class="container rightWrapper">
+        <noscript><table style="width:100%;height:100%;"><tr style="vertical-align:middle;"><td><div style="text-align:center;">ERROR:<br/><br/>Javascript not activated<br/><br/></div></td></tr></table></noscript>
+        <script>
+          embedpano({swf:"/static/tour.swf", xml:"/static/tour.xml", target:"pano", html5:"auto", mobilescale:1.0, passQueryParameters:true});
+        </script>
+      </div>
+    </div>
+    <!-- built files will be auto injected -->
+</body>
+</html>
