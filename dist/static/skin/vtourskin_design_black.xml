@@ -1,0 +1,71 @@
+﻿<krpano>
+
+	<!-- Flat Light Design -->
+
+	<!-- modify the <skin_settings> values -->
+	<skin_settings layout_width="100%"
+	               layout_maxwidth="100%"
+	               controlbar_width="100%"
+	               controlbar_height="40"
+	               controlbar_offset.normal="0"
+	               controlbar_offset.mobile="0"
+	               controlbar_offset_closed="-40"
+	               controlbar_overlap.no-fractionalscaling="0"
+	               controlbar_overlap.fractionalscaling="0"
+	               design_skin_images="vtourskin.png"
+	               design_bgcolor="0x000000"
+	               design_bgalpha="1.0"
+	               design_bgborder="0"
+	               design_bgroundedge="0"
+	               design_bgshadow="0 4 10 0xFFFFFF 0.3"
+	               design_thumbborder_bgborder="3 0xB2B2B2 1.0"
+	               design_thumbborder_padding="2"
+	               design_thumbborder_bgroundedge="0"
+	               design_text_css="color:#FFFFFF; font-family:Arial;"
+	               design_text_shadow="0"
+	               />
+
+	<!-- adjust the design of some skin elements  -->
+	<layer name="skin_layer">
+		<layer name="skin_loadingtext" width="100%" css="calc:skin_settings.design_text_css + ' text-align:center; font-size:20px;'" padding="4 6" textshadow="calc:2.0" textshadowrange="1.0" textshadowangle="90" textshadowcolor="0x2D3E50" textshadowalpha="1.0" />
+		<layer name="skin_control_bar" alpha="0.7" />
+	</layer>
+
+
+	<!-- use a fullscreen map -->
+	<action name="skin_showmap">
+		if(%1 == null, if(layer[skin_map].state == 'closed', set(show,true), set(show,false)); , set(show,%1); );
+		mul(mh, layer[skin_scroll_layer].pixelheight, -1);
+		if(show,
+			tween(layer[skin_thumbs_container].alpha, 0.0, 0.25, default, set(layer[skin_thumbs_container].visible,false));
+			set(layer[skin_map].visible, true);
+			tween(layer[skin_map].alpha, 1.0, 0.25);
+			set(layer[skin_map].state, 'opened');
+			sub(hh,area.pixelheight,skin_settings.controlbar_offset);
+			sub(hh,layer[skin_control_bar].height);
+			sub(hh,0);
+			add(mh,hh);
+			sub(hh,skin_settings.controlbar_overlap);
+			copy(layer[skin_map].height, hh);
+			tween(layer[skin_scroll_layer].y, get(mh), 0.5, easeOutQuint);
+		  ,
+		  	if(layer[skin_map].state != 'closed',
+				set(layer[skin_map].state, 'closed');
+				add(mh, layer[skin_scroll_layer].y_offset);
+				tween(layer[skin_map].alpha, 0.0, 0.5, easeOutQuint);
+				tween(layer[skin_scroll_layer].y, get(mh), 0.5, easeOutQuint, set(layer[skin_map].visible,false) );
+			  );
+		  );
+	</action>
+
+
+	<!-- webvr button style (adjust to match skin style) -->
+	<style name="webvr_button_style"
+	       border="false"
+	       roundedge="calc:1.0"
+	       backgroundcolor="get:skin_settings.design_bgcolor" backgroundalpha="get:skin_settings.design_bgalpha"
+	       shadow="0.01" shadowrange="10.0" shadowangle="90.0" shadowcolor="0x30261B" shadowalpha="0.50"
+	       css="calc:skin_settings.design_text_css + ' font-size:' + 20*webvr_setup_scale*webvr_button_scale + 'px;'"
+	       />
+
+</krpano>
